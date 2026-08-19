@@ -1,11 +1,13 @@
-"""Render a company profile (markdown) as a styled, print-ready HTML document."""
+"""Render a company profile (markdown) as a styled, print-ready HTML document.
+
+Tolerant of format drift: accepts summary fields as CAPS lines or markdown bullets,
+and provenance as a bare tag line or an inline attribution clause.
+"""
 
 import html as html_lib
 import re
 from datetime import date
 from pathlib import Path
-
-import markdown
 
 CSS = """
 :root {
@@ -38,8 +40,6 @@ body {
   margin: 0 auto;
   padding: 5rem 2rem 6rem;
 }
-
-/* ---- masthead ---- */
 
 .masthead {
   margin-left: var(--rail);
@@ -82,8 +82,6 @@ body {
 
 .meta b { font-weight: 400; color: var(--faint); }
 
-/* ---- section headings ---- */
-
 h2 {
   position: relative;
   margin: 3rem 0 1.25rem calc(-1 * var(--rail));
@@ -107,8 +105,6 @@ h2::before {
 
 p { margin: 0 0 1rem var(--rail); max-width: var(--measure); }
 
-/* ---- field grid: the summary block ---- */
-
 .fields {
   margin-left: var(--rail);
   max-width: var(--measure);
@@ -124,7 +120,7 @@ p { margin: 0 0 1rem var(--rail); max-width: var(--measure); }
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--faint);
-  padding: 0.6rem 0 0.6rem 0;
+  padding: 0.65rem 0;
   border-bottom: 1px solid var(--rule);
   line-height: 1.5;
 }
@@ -142,10 +138,8 @@ p { margin: 0 0 1rem var(--rail); max-width: var(--measure); }
   font-size: 0.625rem;
   letter-spacing: 0.09em;
   color: var(--faint);
-  padding-top: 0.75rem;
+  padding-top: 0.8rem;
 }
-
-/* ---- findings with provenance rail ---- */
 
 .finding {
   position: relative;
@@ -173,7 +167,14 @@ p { margin: 0 0 1rem var(--rail); max-width: var(--measure); }
 .tag.independent { color: var(--indep); }
 .tag.issued      { color: var(--issued); }
 
-/* ---- footnotes and sources ---- */
+.finding .date {
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  display: block;
+  margin-top: 0.35rem;
+}
 
 sup.fn {
   font-family: var(--mono);
@@ -206,8 +207,6 @@ sup.fn {
   color: var(--faint);
 }
 
-/* ---- gaps ---- */
-
 .gaps { margin-left: var(--rail); max-width: var(--measure); padding: 0; list-style: none; }
 
 .gaps li {
@@ -235,8 +234,6 @@ sup.fn {
   color: var(--faint);
   max-width: var(--measure);
 }
-
-/* ---- narrow screens ---- */
 
 @media (max-width: 42rem) {
   :root { --rail: 0rem; }
@@ -269,23 +266,87 @@ sup.fn {
 }
 """
 
-FIELD_RE = re.compile(r"^([A-Z][A-Z /()]{2,40}):\s*(.*)$", re.MULTILINE)
-URL_RE = re.compile(r"https?://[^\s<>\"')]+")
-TAG_RE = re.compile(r"^(COMPANY-ISSUED|INDEPENDENT)\s*$", re.I)
+# Accepts "COMPANY NAME: x", "- **company_name:** x", "* products_services: x"
+FIELD_RE = re.compile(r"^\s*[-*]?\s*([A-Za-z][A-Za-z _/()]{2,45}?)\s*:\s*(.*?)\s*$")
+# A trailing attribution clause the writer sometimes appends to a finding.
+ATTRIB_TAIL = re.compile(
+    r"[\s,.]*(?:The statement is|Reported by|Source[:s]?|According to|Sourced)\b.*$",
+    re.I | re.S,
+)
+PROV_RE = re.compile(r"\b(company[- ]issued|independent)\b", re.I)
+BARE_TAG_RE = re.compile(r"^\s*\**(COMPANY[- ]ISSUED|INDEPENDENT)\**\s*\.?\s*$", re.I)
+DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
+URL_RE = re.compile(r"https?://[^\s<>\"')\]]+")
+UNKNOWNS = {"UNKNOWN", "N/A", "NOT ESTABLISHED", "NONE", ""}
+
+# Section names the writer uses. Matched even when the markdown ## is missing.
+KNOWN_HEADINGS = {
+    "overview": "Overview",
+    "company summary": "Company Summary",
+    "summary": "Company Summary",
+    "recent developments": "Recent Developments",
+    "recent findings": "Recent Developments",
+    "findings": "Recent Developments",
+    "what could not be determined": "What Could Not Be Determined",
+    "could not be determined": "What Could Not Be Determined",
+    "what could not be established": "What Could Not Be Determined",
+}
+
+
+def _as_heading(line: str) -> str | None:
+    """Return the canonical heading if this line is one, else None."""
+    stripped = _strip_md(line).strip()
+    if stripped.startswith("##"):
+        return stripped.lstrip("#").strip()
+    key = stripped.rstrip(":").strip().lower()
+    if key in KNOWN_HEADINGS and len(stripped) < 60:
+        return KNOWN_HEADINGS[key]
+    return None
+
+
+def _strip_md(text: str) -> str:
+    return text.replace("**", "").replace("__", "")
+
+
+def _prettify_label(label: str) -> str:
+    return label.replace("_", " ").replace("/", " / ").upper()
+
+
+_HEADING_NAMES = (
+    r"Overview|Company Summary|Recent Developments|Recent Findings|"
+    r"What Could Not Be Determined|Could Not Be Determined"
+)
+# Break before a heading that is glued to the end of the previous sentence.
+_HEADING_BEFORE = re.compile(rf"(?<=[.\)])\s+(?=\b(?:{_HEADING_NAMES})\b)")
+# Break after a heading that has body text glued to it on the same line.
+_HEADING_AFTER = re.compile(rf"^\s*({_HEADING_NAMES})\s*:?\s+(?=\S)", re.MULTILINE)
+_FIELD_SPLIT = re.compile(
+    r"\s+(?=\b(?:COMPANY NAME|YEAR FOUNDED|PRIMARY INDUSTRY|HEADQUARTERS COUNTRY|"
+    r"HEADQUARTERS|PUBLIC OR PRIVATE|PRODUCTS[ /]?SERVICES|TICKER|PARENT COMPANY|"
+    r"EMPLOYEE COUNT|ANNUAL REVENUE|MARKET CAP)\b\s*:)"
+)
+_TAG_SPLIT = re.compile(r"\s*(?<=[.\)])\s+(COMPANY-ISSUED|INDEPENDENT)\b\s*", re.I)
+
+
+def _unrun(md: str) -> str:
+    """Re-break a profile the writer collapsed onto single lines."""
+    md = _HEADING_BEFORE.sub("\n\n", md)
+    md = _HEADING_AFTER.sub(lambda m: m.group(1) + "\n\n", md)
+    md = _FIELD_SPLIT.sub("\n", md)
+    md = _TAG_SPLIT.sub(lambda m: "\n" + m.group(1).upper() + "\n\n", md)
+    return md
 
 
 def _split_sections(md: str) -> list[tuple[str, list[str]]]:
-    """Break the markdown into (heading, lines) pairs."""
-    sections: list[tuple[str, list[str]]] = []
-    heading = ""
-    buffer: list[str] = []
-    for line in md.splitlines():
-        if line.startswith("## "):
+    sections, heading, buffer = [], "", []
+    for line in _unrun(md).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("# ") and not stripped.startswith("##"):
+            continue
+        found = _as_heading(line)
+        if found:
             sections.append((heading, buffer))
-            heading = line[3:].strip()
-            buffer = []
-        elif line.startswith("# "):
-            continue  # title comes from the masthead
+            heading, buffer = found, []
         else:
             buffer.append(line)
     sections.append((heading, buffer))
@@ -295,82 +356,138 @@ def _split_sections(md: str) -> list[tuple[str, list[str]]]:
 def _render_fields(lines: list[str]) -> str:
     rows = []
     for line in lines:
-        match = FIELD_RE.match(line.strip())
+        if not line.strip():
+            continue
+        match = FIELD_RE.match(_strip_md(line))
         if not match:
             continue
         label, value = match.group(1).strip(), match.group(2).strip()
-        cls = ' class="unknown"' if value.upper() in {"UNKNOWN", "N/A", ""} else ""
-        display = html_lib.escape(value or "UNKNOWN")
-        rows.append(f"<dt>{html_lib.escape(label)}</dt><dd{cls}>{display}</dd>")
+        if not label:
+            continue
+        cls = ' class="unknown"' if value.upper() in UNKNOWNS else ""
+        rows.append(
+            f"<dt>{html_lib.escape(_prettify_label(label))}</dt>"
+            f"<dd{cls}>{html_lib.escape(value or 'UNKNOWN')}</dd>"
+        )
     return f'<dl class="fields">{"".join(rows)}</dl>' if rows else ""
 
 
 def _render_findings(lines: list[str], urls: list[str]) -> str:
-    blocks, current, tag = [], [], None
+    blocks: list[str] = []
+    body_lines: list[str] = []
+    tag: str | None = None
 
     def flush():
-        nonlocal current, tag
-        text = " ".join(current).strip()
-        if text:
-            marker = ""
-            if tag:
-                cls = "issued" if tag.upper().startswith("COMPANY") else "independent"
-                marker = f'<span class="tag {cls}">{html_lib.escape(tag.title())}</span>'
-            blocks.append(f'<div class="finding">{marker}<p>{text}</p></div>')
-        current, tag = [], None
+        nonlocal body_lines, tag
+        raw = " ".join(l for l in body_lines if l).strip()
+        local_tag, body_lines, tag = tag, [], None
+        if not raw:
+            return
+
+        # Pull URLs out before anything is stripped, so footnotes survive.
+        found_urls = URL_RE.findall(raw)
+        found_date = DATE_RE.search(raw)
+
+        if local_tag is None:
+            tail = ATTRIB_TAIL.search(raw)
+            if tail:
+                found = PROV_RE.search(tail.group(0))
+                local_tag = found.group(1) if found else None
+
+        body = URL_RE.sub("", ATTRIB_TAIL.sub("", raw)).strip(" ,;.")
+        if body:
+            body += "."
+
+        refs = ""
+        for url in found_urls:
+            cleaned = url.rstrip(".,;:)")
+            if cleaned not in urls:
+                urls.append(cleaned)
+            refs += f'<sup class="fn">{urls.index(cleaned) + 1}</sup>'
+
+        marker = ""
+        if local_tag:
+            normalised = local_tag.replace(" ", "-").upper()
+            cls = "issued" if normalised.startswith("COMPANY") else "independent"
+            label = "Company-issued" if cls == "issued" else "Independent"
+            marker = f'<span class="tag {cls}">{label}</span>'
+
+        stamp = (
+            f'<span class="date">{html_lib.escape(found_date.group(1))}</span>'
+            if found_date
+            else ""
+        )
+        blocks.append(f'<div class="finding">{marker}<p>{body}{refs}{stamp}</p></div>')
 
     for line in lines:
         stripped = line.strip()
         if not stripped:
             flush()
-        elif TAG_RE.match(stripped):
-            tag = stripped
+        elif BARE_TAG_RE.match(stripped):
+            tag = BARE_TAG_RE.match(stripped).group(1)
             flush()
         else:
-            def swap(m):
-                url = m.group(0).rstrip(".,;:)")
-                if url not in urls:
-                    urls.append(url)
-                return f'<sup class="fn">{urls.index(url) + 1}</sup>'
-            current.append(URL_RE.sub(swap, html_lib.escape(stripped)))
+            body_lines.append(html_lib.escape(_strip_md(stripped)))
     flush()
     return "".join(blocks)
 
 
+def _footnote(match, urls: list[str]) -> str:
+    url = match.group(0).rstrip(".,;:)")
+    if url not in urls:
+        urls.append(url)
+    return f'<sup class="fn">{urls.index(url) + 1}</sup>'
+
+
 def _render_gaps(lines: list[str]) -> str:
-    items = [
-        f"<li>{html_lib.escape(l.strip().lstrip('-* '))}</li>"
-        for l in lines
-        if l.strip() and not l.strip().startswith("This profile is")
-    ]
+    items = []
+    for line in lines:
+        stripped = _strip_md(line).strip().lstrip("-* ").strip()
+        if not stripped or stripped.lower().startswith("this profile is"):
+            continue
+        items.append(f"<li>{html_lib.escape(stripped)}</li>")
     return f'<ul class="gaps">{"".join(items)}</ul>' if items else ""
+
+
+def _render_prose(lines: list[str], urls: list[str]) -> str:
+    paragraphs, chunk = [], []
+    for line in lines:
+        if line.strip():
+            chunk.append(html_lib.escape(_strip_md(line).strip()))
+        elif chunk:
+            paragraphs.append(" ".join(chunk))
+            chunk = []
+    if chunk:
+        paragraphs.append(" ".join(chunk))
+    return "".join(
+        f"<p>{URL_RE.sub(lambda m: _footnote(m, urls), p)}</p>" for p in paragraphs
+    )
 
 
 def render(profile_markdown: str, company: str, out_dir: Path = Path("output")) -> Path:
     urls: list[str] = []
-    body_parts: list[str] = []
+    parts: list[str] = []
 
     for heading, lines in _split_sections(profile_markdown):
-        text = "\n".join(lines).strip()
-        if not text:
+        if not "\n".join(lines).strip():
             continue
-
         key = heading.lower()
         if heading:
-            body_parts.append(f"<h2>{html_lib.escape(heading)}</h2>")
+            parts.append(f"<h2>{html_lib.escape(heading)}</h2>")
 
-        if "summary" in key and FIELD_RE.search(text):
-            body_parts.append(_render_fields(lines))
+        if "summary" in key:
+            rendered = _render_fields(lines)
+            parts.append(rendered or _render_prose(lines, urls))
         elif "development" in key or "finding" in key:
-            body_parts.append(_render_findings(lines, urls))
-        elif "could not" in key or "unknown" in key or "determined" in key:
-            body_parts.append(_render_gaps(lines))
+            parts.append(_render_findings(lines, urls))
+        elif "could not" in key or "determined" in key or "unknown" in key:
+            parts.append(_render_gaps(lines))
         else:
-            body_parts.append(markdown.markdown(text, extensions=["extra"]))
+            parts.append(_render_prose(lines, urls))
 
     sources = ""
     if urls:
-        items = "\n".join(f"<li>{html_lib.escape(u)}</li>" for u in urls)
+        items = "".join(f"<li>{html_lib.escape(u)}</li>" for u in urls)
         sources = f'<section class="sources"><ol>{items}</ol></section>'
 
     doc = f"""<!DOCTYPE html>
@@ -392,7 +509,7 @@ def render(profile_markdown: str, company: str, out_dir: Path = Path("output")) 
     <span><b>Sources</b> {len(urls)}</span>
     <span><b>Method</b> Retrieved &amp; verified</span>
   </div>
-  {"".join(body_parts)}
+  {"".join(parts)}
   {sources}
   <p class="disclaimer">
     Generated from retrieved sources and machine verification. Findings are labelled by

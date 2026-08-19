@@ -1,16 +1,32 @@
 writing_task:
   description: >
-    Write a company profile on {company} from the verified profile provided.
+    A company profile in markdown, under 500 words from the verified findings below:
 
     {verified_findings}
 
-    Open with two or three sentences orienting the reader: what the company does, its scale,
-    and its status. Then present the summary fields as a reference list, preserving UNKNOWN
-    values as UNKNOWN. Then write each of the three recent findings as a short paragraph,
-    naming its source and whether it is company-issued or independent.
+    Each section begins with a markdown heading on its own line, in this order:
+    ## Overview
+    ## Company Summary
+    ## Recent Developments
+    ## What Could Not Be Determined
 
-    Do not assess whether the company is a good investment, do not issue a recommendation,
-    and do not make forward-looking projections. Keep it under 500 words.
+    Under Overview, two or three sentences of prose.
+
+    Under Company Summary, each field on its own line, in capitals, with no bullets and
+    no markdown emphasis:
+    COMPANY NAME: value
+    YEAR FOUNDED: value
+    PRIMARY INDUSTRY: value
+    HEADQUARTERS COUNTRY: value
+    PUBLIC OR PRIVATE: value
+    PRODUCTS/SERVICES: value
+
+    Under Recent Developments, each finding as a single sentence with its source URL,
+    then a line containing only COMPANY-ISSUED or INDEPENDENT, then a blank line before
+    the next finding. Do not append source names, dates, or provenance to the sentence
+    itself. Omit any finding the verification marked NOT ESTABLISHED.
+
+    Under What Could Not Be Determined, one short line per item.
   expected_output: >
     A company profile in markdown with these sections: Overview, Company Summary,
     Recent Developments, and What Could Not Be Determined.
