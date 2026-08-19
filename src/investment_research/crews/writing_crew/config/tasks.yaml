@@ -1,0 +1,17 @@
+writing_task:
+  description: >
+    Write a company profile on {company} from the verified profile provided.
+
+    {verified_findings}
+
+    Open with two or three sentences orienting the reader: what the company does, its scale,
+    and its status. Then present the summary fields as a reference list, preserving UNKNOWN
+    values as UNKNOWN. Then write each of the three recent findings as a short paragraph,
+    naming its source and whether it is company-issued or independent.
+
+    Do not assess whether the company is a good investment, do not issue a recommendation,
+    and do not make forward-looking projections. Keep it under 500 words.
+  expected_output: >
+    A company profile in markdown with these sections: Overview, Company Summary,
+    Recent Developments, and What Could Not Be Determined.
+  agent: writer

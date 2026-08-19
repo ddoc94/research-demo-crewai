@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boeing — Company Profile</title>
+<style>
+:root {
+  --paper:  #FBFBFA;
+  --ink:    #16181D;
+  --muted:  #5C6270;
+  --faint:  #8B91A0;
+  --rule:   #DDDFE3;
+  --indep:  #2C5F5A;
+  --issued: #8C6D1F;
+  --measure: 33rem;
+  --rail: 8.5rem;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Charter, "Iowan Old Style", "Source Serif Pro", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sheet {
+  max-width: calc(var(--rail) + var(--measure));
+  margin: 0 auto;
+  padding: 5rem 2rem 6rem;
+}
+
+/* ---- masthead ---- */
+
+.masthead {
+  margin-left: var(--rail);
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 0.75rem;
+}
+
+.masthead h1 {
+  font-size: 2.25rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  margin: 0;
+}
+
+.meta {
+  margin-left: var(--rail);
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 3rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 3rem;
+}
+
+.meta b { font-weight: 400; color: var(--faint); }
+
+/* ---- section headings ---- */
+
+h2 {
+  position: relative;
+  margin: 3rem 0 1.25rem calc(-1 * var(--rail));
+  padding-left: var(--rail);
+  font-size: 0.75rem;
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: calc(var(--rail) - 1.5rem);
+  border-top: 1px solid var(--ink);
+}
+
+p { margin: 0 0 1rem var(--rail); max-width: var(--measure); }
+
+/* ---- field grid: the summary block ---- */
+
+.fields {
+  margin-left: var(--rail);
+  max-width: var(--measure);
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  column-gap: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.fields dt {
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0.6rem 0 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+  line-height: 1.5;
+}
+
+.fields dd {
+  margin: 0;
+  padding: 0.55rem 0;
+  font-size: 0.9375rem;
+  border-bottom: 1px solid var(--rule);
+  line-height: 1.5;
+}
+
+.fields dd.unknown {
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.09em;
+  color: var(--faint);
+  padding-top: 0.75rem;
+}
+
+/* ---- findings with provenance rail ---- */
+
+.finding {
+  position: relative;
+  margin: 0 0 1.5rem var(--rail);
+  max-width: var(--measure);
+}
+
+.finding p { margin: 0; }
+
+.tag {
+  position: absolute;
+  left: calc(-1 * var(--rail));
+  top: 0.3em;
+  width: calc(var(--rail) - 1.5rem);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  text-align: right;
+  padding-right: 0.5rem;
+  border-right: 2px solid currentColor;
+}
+
+.tag.independent { color: var(--indep); }
+.tag.issued      { color: var(--issued); }
+
+/* ---- footnotes and sources ---- */
+
+sup.fn {
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  color: var(--indep);
+  padding-left: 0.1em;
+}
+
+.sources { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+.sources ol { margin-left: var(--rail); padding: 0; list-style: none; counter-reset: src; }
+
+.sources li {
+  counter-increment: src;
+  position: relative;
+  padding-left: 2rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+  word-break: break-all;
+  margin-bottom: 0.5rem;
+}
+
+.sources li::before {
+  content: counter(src);
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  color: var(--faint);
+}
+
+/* ---- gaps ---- */
+
+.gaps { margin-left: var(--rail); max-width: var(--measure); padding: 0; list-style: none; }
+
+.gaps li {
+  position: relative;
+  padding-left: 1.1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.gaps li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.72em;
+  width: 5px;
+  height: 1px;
+  background: var(--faint);
+}
+
+.disclaimer {
+  margin: 3rem 0 0 var(--rail);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--faint);
+  max-width: var(--measure);
+}
+
+/* ---- narrow screens ---- */
+
+@media (max-width: 42rem) {
+  :root { --rail: 0rem; }
+  .sheet { padding: 2.5rem 1.25rem 4rem; }
+  .masthead h1 { font-size: 1.75rem; }
+  h2 { margin-left: 0; padding-left: 0; }
+  h2::before { display: none; }
+  .fields { grid-template-columns: 1fr; }
+  .fields dt { border-bottom: none; padding-bottom: 0; }
+  .fields dd { padding-top: 0.15rem; }
+  .tag {
+    position: static;
+    display: inline-block;
+    width: auto;
+    text-align: left;
+    border-right: none;
+    border-left: 2px solid currentColor;
+    padding: 0 0 0 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .meta { gap: 1rem; }
+}
+
+@media print {
+  :root { --paper: #fff; }
+  .sheet { padding: 0; max-width: none; }
+  h2 { break-after: avoid; }
+  .finding, .fields dt, .fields dd { break-inside: avoid; }
+  .sources { break-before: page; }
+}
+</style>
+</head>
+<body>
+<article class="sheet">
+  <header class="masthead">
+    <p class="eyebrow">Company profile</p>
+    <h1>Boeing</h1>
+  </header>
+  <div class="meta">
+    <span><b>Prepared</b> 2026-08-18</span>
+    <span><b>Sources</b> 2</span>
+    <span><b>Method</b> Retrieved &amp; verified</span>
+  </div>
+  <h2>Overview</h2><p>The Boeing Company develops, manufactures and services commercial airplanes, defense products and space systems for customers in more than 150 countries. It was founded in 1916 and is headquartered in the United States. The company is publicly traded and operates in the Aerospace industry.</p><h2>Company Summary</h2><ul>
+<li><strong>company_name:</strong> The Boeing Company</li>
+<li><strong>year_founded:</strong> 1916</li>
+<li><strong>primary_industry:</strong> Aerospace</li>
+<li><strong>headquarters_country:</strong> United States</li>
+<li><strong>public_or_private:</strong> Public</li>
+<li><strong>products_services:</strong> Develops, manufactures and services commercial airplanes, defense products and space systems for customers in more than 150 countries.</li>
+</ul><h2>Recent Developments</h2><div class="finding"><p>Independent coverage identifies ongoing safety and quality management risks with mounting legal exposure including over $1.1 billion in fines and victim compensation. The statement is from LogicManager, independent, dated 2025-07-27, <sup class="fn">1</sup></p></div><div class="finding"><p>Boeing received FAA certification for the new 737-7 airplane on August 3, 2026. The statement is company-issued via Boeing Media Room, dated 2026-08-03, <sup class="fn">2</sup></p></div><h2>What Could Not Be Determined</h2><ul class="gaps"><li>No summary fields are marked UNKNOWN in the verified profile. Verification notes indicate one finding was removed for an unsupported statement and is not included here.</li></ul>
+  <section class="sources"><ol><li>https://www.logicmanager.com/resources/thought-leadership/failures-in-risk-management-boeings-freefall-continues/</li>
+<li>https://boeing.mediaroom.com/2026-08-03-U-S-FAA-certifies-new-Boeing-737-7-airplane</li></ol></section>
+  <p class="disclaimer">
+    Generated from retrieved sources and machine verification. Findings are labelled by
+    provenance; company-issued material has not been independently corroborated.
+    Fields marked unknown could not be sourced and have not been inferred.
+  </p>
+</article>
+</body>
+</html>

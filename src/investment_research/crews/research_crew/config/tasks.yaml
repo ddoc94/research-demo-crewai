@@ -1,0 +1,44 @@
+research_task:
+  description: >
+    Today is {today}. Research {company} and return a company profile in the format
+    below.
+
+    Find these six fields: COMPANY NAME, YEAR FOUNDED, PRIMARY INDUSTRY, HEADQUARTERS
+    COUNTRY, PUBLIC OR PRIVATE, PRODUCTS/SERVICES (one sentence).
+
+    Then find three items, one of each type:
+    DEVELOPMENT - a specific event in the last twelve months.
+    RISK - a specific exposure the company or independent coverage has identified.
+    CAPITAL - a dividend, buyback, debt action, or stated capital return figure.
+
+    Write UNKNOWN for any field you cannot source from a page you retrieved. Write
+    NOT ESTABLISHED for any item you cannot source. Never answer from memory.
+  expected_output: >
+    The six company summary fields, and exactly three findings, one of each type
+    (DEVELOPMENT, RISK, CAPITAL). Each finding carries its statement, source URL, source
+    date, and provenance. Write NOT ESTABLISHED as the statement for any type you could
+    not source, leaving its URL, date, and provenance empty.
+  agent: researcher
+
+verification_task:
+  description: >
+    Today is {today}. Check the researcher's profile on {company}, which is provided in
+    your context. You cannot retrieve anything - work only from what is given.
+
+    Summary fields: keep each value unless it contradicts the researcher's sources or is
+    obviously wrong. These fields carry no individual URLs; do not replace a value for
+    that reason.
+
+    Findings: remove an item only if it has no URL, or its URL plainly does not
+    correspond to the statement. Keep items sourced to filings, earnings releases, and
+    audited reports. COMPANY-ISSUED is a label, not grounds for removal.
+
+    Mark any source dated more than twelve months before {today} as stale, and keep it.
+
+    Report every value you change. Never supply a value or a source of your own.
+  expected_output: >
+    The company summary and exactly three findings, one of each type, with verification
+    notes and a count of findings kept.
+  agent: verifier
+  context:
+    - research_task

@@ -1,0 +1,27 @@
+[project]
+name = "investment_research"
+version = "0.1.0"
+description = "investment_research using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "beautifulsoup4>=4.13.5",
+    "crewai-tools>=1.15.16",
+    "crewai[anthropic,tools]>=1.15.15,<2.0.0",
+    "markdown>=3.10.3",
+    "requests>=2.34.2",
+]
+
+[project.scripts]
+kickoff = "investment_research.main:kickoff"
+run_crew = "investment_research.main:kickoff"
+plot = "investment_research.main:plot"
+run_with_trigger = "investment_research.main:run_with_trigger"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "flow"
+project_id = "dfb22427-ff8b-4a0a-ba56-e0926751eb70"
