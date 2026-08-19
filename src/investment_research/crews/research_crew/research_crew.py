@@ -6,8 +6,8 @@ from investment_research.tools.verified_scrape import VerifiedScrapeTool
 from investment_research.schemas import ResearchOutput, VerifiedOutput
 
 
-researcher_llm = LLM(model="ollama/qwen3.5:9b-mlx", base_url="http://localhost:11434")
-verifier_llm = LLM(model="ollama/llama3.1:8b", base_url="http://localhost:11434")
+researcher_llm = LLM(model="openai/gpt-4o-mini")
+verifier_llm = LLM(model="openai/gpt-4o")
 
 
 @CrewBase
@@ -25,7 +25,6 @@ class ResearchCrew:
         return Agent(
             config=self.agents_config["researcher"],
             llm=researcher_llm,
-            function_calling_llm="anthropic/claude-haiku-4-5-20251001",
             tools=[SerperDevTool(), VerifiedScrapeTool()],
         )
 
@@ -34,7 +33,6 @@ class ResearchCrew:
         return Agent(
             config=self.agents_config["verifier"],  # type: ignore[index]
             llm=verifier_llm,
-            function_calling_llm="anthropic/claude-haiku-4-5-20251001",
             tools=[],
         )
 

@@ -7,7 +7,7 @@ requires-python = ">=3.10,<3.14"
 dependencies = [
     "beautifulsoup4>=4.13.5",
     "crewai-tools>=1.15.16",
-    "crewai[anthropic,tools]>=1.15.15,<2.0.0",
+    "crewai[anthropic,openai,tools]>=1.15.15,<2.0.0",
     "markdown>=3.10.3",
     "requests>=2.34.2",
 ]

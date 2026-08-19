@@ -1214,7 +1214,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.5" },
-    { name = "crewai", extras = ["anthropic", "tools"], specifier = ">=1.15.15,<2.0.0" },
+    { name = "crewai", extras = ["anthropic", "openai", "tools"], specifier = ">=1.15.15,<2.0.0" },
     { name = "crewai-tools", specifier = ">=1.15.16" },
     { name = "markdown", specifier = ">=3.10.3" },
     { name = "requests", specifier = ">=2.34.2" },

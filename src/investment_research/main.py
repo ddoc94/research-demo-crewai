@@ -92,6 +92,7 @@ class InvestmentResearchFlow(Flow[ResearchState]):
     def make_html(self):
         path = formatting.render(self.state.research_note, self.state.company)
         print(f"Formatted note at {path}")
+        print(self.usage_metrics)
 
 def kickoff():
     company = input("Company to research: ")

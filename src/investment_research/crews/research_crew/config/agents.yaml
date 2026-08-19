@@ -10,8 +10,8 @@ researcher:
     memory.
   verbose: true
   allow_delegation: false
-  max_iter: 12
-  max_execution_time: 1800
+  max_iter: 10
+  max_execution_time: 300
   respect_context_window: true
 
 verifier:
@@ -27,6 +27,6 @@ verifier:
   verbose: true
   allow_delegation: false
   max_iter: 10
-  max_execution_time: 1200
+  max_execution_time: 300
   respect_context_window: true
 
