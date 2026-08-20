@@ -1,71 +1,93 @@
 # Company Research Profiler
 
-A multi-agent pipeline built on CrewAI. You give it a company name, it researches the company, checks its own claims against the sources they came from, and spits out a formatted profile.
+This repo contains a CrewAI demo Flow comprised of two crews and three agents. It takes in a company name, researches it, and creates a brief company profile containing:
 
-I built this to learn CrewAI properly. The output is fine. The interesting part was everything that went wrong on the way there.
+- Six summary fields — name, founding year, industry, headquarters, public/private, products
+- Three findings — a recent development, an identified risk, and a capital action
+- A source URL and date on every finding
+- A provenance label on every finding: company-issued or independent
 
-## What it does
-Searches and scrapes pages about the company
-Pulls out six summary fields and three findings: a recent development, a risk, a capital action — each with a source URL
-A second agent checks every claim against the source it cites and throws out anything unsupported
-Branches: enough verified findings → write the profile. Not enough → say so instead
-Renders it as HTML
+<br>
 
-Every claim is labelled company-issued or independent, and the output shows that in the margin so you can see at a glance how much of the profile rests on the company's own material.
+# Getting Started
 
-## Architecture
-Flow  ── @start           set company + run date
+### 1. Prerequisites
+- Python 3.10+
+- uv — handles Python versions, virtual environments, and packages. Install it with:
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Close and reopen terminal so it picks up PATH.
+
+<br>
+
+### 2. Clone and install
+
+```
+git clone https://github.com/ddoc94/research-demo-crewai.git
+cd research-demo-crewai
+uv sync
+```
+
+<br>
+
+### 3. Add API keys
+
+Example includes OpenAI key, but any other cloud LLM provider can be used.
+
+- OPENAI_API_KEY:	platform.openai.com (for model inference)
+- SERPER_API_KEY:	serper.dev	(for web search)
+
+Rename example .env:
+
+```
+cp .env.example .env
+```
+
+Add keys to .env:
+```
+OPENAI_API_KEY=sk-...
+<br>SERPER_API_KEY=...
+```
+
+.env is gitignored, so keys stay local.
+
+<br>
+
+### 4. Run it
+
+```
+uv run kickoff
+```
+
+It prompts for a company name and takes about a minute, printing each stage as it goes. Results land in output/ as markdown and HTML:
+
+```
+open output/<company>_profile.html
+```
+
+`uv run plot` generates a diagram of the flow.
+
+<br>
+
+# Flow Architecture
+      ── @start           set company + run date
       ├─ Research Crew    Researcher (has tools) → Verifier (no tools)
       ├─ @router          enough verified findings?
       ├─ Writing Crew     Writer, or a gap report
       └─ render HTML      plain Python, no model
 
-Three decisions worth explaining:
+A Flow handles orchestration, state, and branching. Two Crews handle the parts that need judgment. Everything else is just Python.
 
-Flow first, crews inside it. Orchestration, state and branching are ordinary Python. The crews only do the parts that need judgment. So the call on whether there's enough evidence to write is made by code, not by a model.
+<br>
 
-Verification is its own agent. Telling the researcher "only make supported claims" doesn't work. A second agent whose entire job is checking claims against sources
+# Known limitations
 
-Formatting is not an agent. Markdown to styled HTML is deterministic. Putting it in an agent would cost tokens, vary between runs, and give the model a chance to quietly edit content that had already been verified. It was shaky when handled by an agent.
-
-## Running it
-
-Python 3.10+ and uv.
-
-bash
-uv sync
-cp .env.example .env    # OPENAI_API_KEY and SERPER_API_KEY
-uv run kickoff
-
-Output goes to output/. uv run plot draws the flow.
-
-## A Note on Running Locally
-
-It also runs fully local through Ollama, since that was the original design, intended to not use API credits as I tested. You can swap the model strings in the two crew files and nothing leaves your machine. It was tough to make reliable though and get agents to either stick to instructions or not need very heavy prompting (which caused other problems). I used Qwen3-embedding 4b for embeddings, llama3.1 8b for the Researcher, Muse Glimmer 30b for the Verifier and Writer. It was an interesting experiment and uncovered a lot:
-
-Model-specific failures
-
-- 9B reasoning model emitted its internal thinking as the final answer
-- Same model returned nothing at all when forced to a final answer mid-loop
-- 8B instruct model fabricated sources and attributed them to pages it never visited
-- 30B leaked chat-template tokens that broke JSON parsing
-
-Speed and timeouts
-
-- Local inference roughly 15-25 tokens/sec versus near-instant cloud, so runs took 15+ minutes
-- Repeatedly hit max_execution_time and max_iter before finishing
-- Runtime scaled with how much coverage a company had, making it unpredictable
-
-Instruction-following under load
-
-- Ignored stated search budgets. Models couldn't count their own tool calls
-- Format specs drifted between runs until schemas were enforced
-- Degraded noticeably as prompts accumulated constraints
-- Struggled with reliable tool calling, which is why function_calling_llm had to point at a cloud model
-
-Operational
-
-- Three models loaded simultaneously created memory pressure on a laptop (I drained my battery like crazy too, my charger couldn't even keep up)
-- Embeddings needed a separate local model, since memory and knowledge require one
+- Aggregators and Wikipedia pass verification more often than they should. Pointing the researcher at investor relations pages and SEC filings first would fix most of this.
+- The verifier checks internal consistency only. It can't fetch a source to compare against it.
+- Many publications like Reuters, Bloomberg, and WSJ block scrapers, which biases available sources toward company-issued material, which is not ideal.
+- No evaluation harness. Output quality is assessed by reading it.
 
 CrewAI · OpenAI API (or Ollama) · Serper · Pydantic · BeautifulSoup
