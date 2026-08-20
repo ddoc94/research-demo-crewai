@@ -1,56 +1,71 @@
-# {{crew_name}} Crew
+# Company Research Profiler
 
-Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+A multi-agent pipeline built on CrewAI. You give it a company name, it researches the company, checks its own claims against the sources they came from, and spits out a formatted profile.
 
-## Installation
+I built this to learn CrewAI properly. The output is fine. The interesting part was everything that went wrong on the way there.
 
-Ensure you have Python >=3.10 <3.14 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+## What it does
+Searches and scrapes pages about the company
+Pulls out six summary fields and three findings: a recent development, a risk, a capital action — each with a source URL
+A second agent checks every claim against the source it cites and throws out anything unsupported
+Branches: enough verified findings → write the profile. Not enough → say so instead
+Renders it as HTML
 
-First, if you haven't already, install uv:
+Every claim is labelled company-issued or independent, and the output shows that in the margin so you can see at a glance how much of the profile rests on the company's own material.
 
-```bash
-pip install uv
-```
+## Architecture
+Flow  ── @start           set company + run date
+      ├─ Research Crew    Researcher (has tools) → Verifier (no tools)
+      ├─ @router          enough verified findings?
+      ├─ Writing Crew     Writer, or a gap report
+      └─ render HTML      plain Python, no model
 
-Next, navigate to your project directory and install the dependencies:
+Three decisions worth explaining:
 
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
-```
+Flow first, crews inside it. Orchestration, state and branching are ordinary Python. The crews only do the parts that need judgment. So the call on whether there's enough evidence to write is made by code, not by a model.
 
-### Customizing
+Verification is its own agent. Telling the researcher "only make supported claims" doesn't work. A second agent whose entire job is checking claims against sources
 
-**Add your `OPENAI_API_KEY` into the `.env` file**
+Formatting is not an agent. Markdown to styled HTML is deterministic. Putting it in an agent would cost tokens, vary between runs, and give the model a chance to quietly edit content that had already been verified. It was shaky when handled by an agent.
 
-- Modify `src/investment_research/config/agents.yaml` to define your agents
-- Modify `src/investment_research/config/tasks.yaml` to define your tasks
-- Modify `src/investment_research/crew.py` to add your own logic, tools and specific args
-- Modify `src/investment_research/main.py` to add custom inputs for your agents and tasks
+## Running it
 
-## Running the Project
+Python 3.10+ and uv.
 
-To kickstart your flow and begin execution, run this from the root folder of your project:
+bash
+uv sync
+cp .env.example .env    # OPENAI_API_KEY and SERPER_API_KEY
+uv run kickoff
 
-```bash
-crewai run
-```
+Output goes to output/. uv run plot draws the flow.
 
-This command initializes the investment_research Flow as defined in your configuration.
+## A Note on Running Locally
 
-This example, unmodified, will run a content creation flow on AI Agents and save the output to `output/post.md`.
+It also runs fully local through Ollama, since that was the original design, intended to not use API credits as I tested. You can swap the model strings in the two crew files and nothing leaves your machine. It was tough to make reliable though and get agents to either stick to instructions or not need very heavy prompting (which caused other problems). I used Qwen3-embedding 4b for embeddings, llama3.1 8b for the Researcher, Muse Glimmer 30b for the Verifier and Writer. It was an interesting experiment and uncovered a lot:
 
-## Understanding Your Crew
+Model-specific failures
 
-The investment_research Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
+- 9B reasoning model emitted its internal thinking as the final answer
+- Same model returned nothing at all when forced to a final answer mid-loop
+- 8B instruct model fabricated sources and attributed them to pages it never visited
+- 30B leaked chat-template tokens that broke JSON parsing
 
-## Support
+Speed and timeouts
 
-For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
+- Local inference roughly 15-25 tokens/sec versus near-instant cloud, so runs took 15+ minutes
+- Repeatedly hit max_execution_time and max_iter before finishing
+- Runtime scaled with how much coverage a company had, making it unpredictable
 
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+Instruction-following under load
 
-Let's create wonders together with the power and simplicity of crewAI.
+- Ignored stated search budgets. Models couldn't count their own tool calls
+- Format specs drifted between runs until schemas were enforced
+- Degraded noticeably as prompts accumulated constraints
+- Struggled with reliable tool calling, which is why function_calling_llm had to point at a cloud model
+
+Operational
+
+- Three models loaded simultaneously created memory pressure on a laptop (I drained my battery like crazy too, my charger couldn't even keep up)
+- Embeddings needed a separate local model, since memory and knowledge require one
+
+CrewAI · OpenAI API (or Ollama) · Serper · Pydantic · BeautifulSoup
